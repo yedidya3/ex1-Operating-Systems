@@ -51,9 +51,11 @@ int main(){
 
 
     char pathHome[100] = "/";
-   char* pathHome2 = strtok(cwd, "/");
+   //char* pathHome2 = strtok(cwd, "/");
+   char* pathHome2 =  getenv("HOME");
+   
    strcat(pathHome , pathHome2);
-  //  printf("%s\n" ,pathHome );
+    
   
     char listOfPath[SIZE][SIZE];
     int numberOfPath = 0;
@@ -63,8 +65,8 @@ int main(){
        return -1;
    } 
     
-strcpy(listOfPath[numberOfPath] , cwd);
-//printf("%s" , listOfPath[numberOfPath]);
+    strcpy(listOfPath[numberOfPath] , cwd);
+    //printf("%s" , listOfPath[numberOfPath]);
 
 
     char str[SIZE][SIZE];
@@ -73,8 +75,8 @@ strcpy(listOfPath[numberOfPath] , cwd);
     char temp;
     char* amprasent= "&";
     char* amprasent2;
-
-    for (int i = 0; i < SIZE; i++)
+    int i;
+    for (i = 0; i < SIZE; i++)
     {   
     
          isRunning[i]=0;
@@ -103,69 +105,99 @@ strcpy(listOfPath[numberOfPath] , cwd);
         //printf("%s", args[j-1]);
 
        if(j>0){
-           isRunning[i] = 0;
-        if (strcmp( "&" , args[j-1])==0)
-        {
-           
-            args[j-1]=0;
-            str[i][strlen(str[i])-1] = '\0';
-            str[i][strlen(str[i])-1] = '\0';
+           if(strcmp( "echo" , args[0])==0)
+           {            
+               int indexArgs;            
+                for ( indexArgs = 1; indexArgs < j; indexArgs++ ) 
+                {
+                    char dest[strlen(args[indexArgs])+1];
+                    int k =0;
+                    int indexChar;
+                    for(indexChar = 0 ;indexChar<strlen(args[indexArgs]); indexChar++){
+                        
+                        int found = 0;
 
-            int pidFather;
-                
-                if((pidFather = fork() )== 0){
-                    
-                   // *glob  = 1;
-                    //isRunning[i]=1;
-                   doCommand(args , i,isRunning);
-                    exit(EXIT_SUCCESS);
+                        if ( args[indexArgs][indexChar] == '\"' || args[indexArgs][indexChar] == '\'' ){
+                            found = 1;
+                        }
+                        if (found == 0)
+                        {
+                            dest[k++] = args[indexArgs][indexChar];	    
+                        }
+                    }
+                    dest[k]='\0';
+                    strcpy(args[indexArgs],dest);
+                }
+            }
 
-                }
+
+
+
+
+            isRunning[i] = 0;
+            if (strcmp( "&" , args[j-1])==0)
+            {
             
-            
-        }
-        else
-        {
-            if(strcmp( "jobs" , args[0])==0){
-                jobs(str , i , j , isRunning);
-            }
-            else if(strcmp( "history" , args[0])==0){
-                 history(str , i , j , isRunning);
+                args[j-1]=0;
+                str[i][strlen(str[i])-1] = '\0';
+                str[i][strlen(str[i])-1] = '\0';
+
+                int pidFather;
+                    
+                    if((pidFather = fork() )== 0){
+                        
+                    // *glob  = 1;
+                        //isRunning[i]=1;
+                    doCommand(args , i,isRunning);
+                        exit(EXIT_SUCCESS);
+
+                    }
+                
                 
             }
-            else if(strcmp( "cd" , args[0])==0){
-                if(j>2){
-                    printf("Too many argument\n");
+            else
+            {
+                if(strcmp( "jobs" , args[0])==0){
+                    jobs(str , i , j , isRunning);
                 }
-                else if(j==1){
+                else if(strcmp( "history" , args[0])==0){
+                    history(str , i , j , isRunning);
                     
-                    chdir(pathHome);
-                    numberOfPath++;
-                    strcpy(listOfPath[numberOfPath] ,pathHome );
+                }
+                else if(strcmp( "cd" , args[0])==0){
+                    if(j>2){
+                        printf("Too many arguments\n");
+                    }
+                    else if(j==1){
+                        
+                        chdir(pathHome);
+                        numberOfPath++;
+                        strcpy(listOfPath[numberOfPath] ,pathHome );                        
+                    }
+                    else{
+                        int* numberOfPathP = &numberOfPath;
+                    cd(args[1],listOfPath[numberOfPath] ,pathHome, listOfPath ,numberOfPathP );
+                  
+                    }
+                      isRunning[i] = 1; 
                     
+                }
+                else if(strcmp( "exit" , args[0])==0){    
+                    return 0;
                 }
                 else{
-                    int* numberOfPathP = &numberOfPath;
-                cd(args[1],listOfPath[numberOfPath] ,pathHome, listOfPath ,numberOfPathP );
-                }
-                
-            }
-            else if(strcmp( "exit" , args[0])==0){    
-                return 0;
-            }
-            else{
+                    
 
-                doCommand2(args , i,isRunning);
+                    doCommand2(args , i,isRunning);
                 
-              
-                
+                }
+       
+                    
             }
         }
-       }
-       
-       else{
+        else{
            i--;
-       }
+        }
     }
     
     return 0;
@@ -176,7 +208,8 @@ void history(char commands[SIZE][SIZE] , int numberCommand , int j , int isRunni
     if(j>1){
        return;
     }
-    for (int k = 0; k < numberCommand; k++)
+    int k;
+    for ( k = 0; k < numberCommand; k++)
     {
         char* isRun;
         switch(isRunning[k]){
@@ -198,7 +231,8 @@ void jobs(char commands[SIZE][SIZE] , int numberCommand , int j , int isRunning[
     if(j>1){
        return;
     }
-    for (int k = 0; k < numberCommand; k++)
+    int k;
+    for ( k = 0; k < numberCommand; k++)
     {
         
         switch(isRunning[k]){
@@ -274,8 +308,29 @@ void doCommand2(char* args[SIZE] , int numberCommand, int isRunning[SIZE]){
 
 
 int cd(char* args , char* pathOrginal , char* pathHome , char listOfPath[SIZE][SIZE] ,int* numberInListOfPath){
-    //chdir(args);
-    int numberInListOfPathTemp = *numberInListOfPath;
+    
+     int numberInListOfPathTemp = *numberInListOfPath;
+    
+    
+    if(strcmp(args, "/") == 0){
+         if(chdir("/") != 0){
+                printf("chdir failed\n");
+                chdir(pathOrginal);
+                return -1;
+            }
+        (*numberInListOfPath)= numberInListOfPathTemp;
+        (*numberInListOfPath)++;
+        getcwd(listOfPath[*numberInListOfPath], sizeof(listOfPath[*numberInListOfPath]));
+        if(strcmp(listOfPath[*numberInListOfPath] ,listOfPath[(*numberInListOfPath)-1])==0){
+            (*numberInListOfPath)--;
+        }
+        
+          return 0;
+    }
+
+
+
+   
     
     int j = 0;
     char* pathPlace[SIZE];
@@ -286,11 +341,9 @@ int cd(char* args , char* pathOrginal , char* pathHome , char listOfPath[SIZE][S
             j++;
             pathPlace[j] = strtok(NULL, "/");
         }
-   /*for (int i = 0; i < j; i++){
-       printf("%s\n"  ,pathPlace[i] );
-   }*/
-
-    for (int i = 0; i < j; i++){
+  
+    int i;
+    for ( i = 0; i < j; i++){
         // return to the folder that contains
         if (strcmp(pathPlace[i], "..") == 0) 
         {
